@@ -1,0 +1,81 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Movies.Api.Mapping;
+using Movies.Application.Repositories.Interfaces;
+using Movies.Contracts.Requests;
+
+namespace Movies.Api.Controllers;
+
+[ApiController]
+public class MoviesController : ControllerBase
+{
+    private readonly IMovieRepository _movieRepository;
+
+    public MoviesController(IMovieRepository movieRepository)
+    {
+        _movieRepository = movieRepository;
+    }
+
+    [HttpPost(ApiEndpoints.Movies.Create)]
+    public async Task<IActionResult> CreateAsync([FromBody] CreateMovieRequest request)
+    {
+        var movie = request.MapToMovie();
+        await _movieRepository.CreateAsync(movie);
+
+        var response = movie.MapToResponse();
+
+        return CreatedAtAction(nameof(GetAsync), new { id = response.Id }, response);
+    }
+
+    [HttpGet(ApiEndpoints.Movies.Get)]
+    public async Task<IActionResult> GetAsync([FromRoute] Guid id)
+    {
+        var movie = await _movieRepository.GetByIdAsync(id);
+
+        if (movie is null)
+        {
+            return NotFound();
+        }
+
+        var response = movie.MapToResponse();
+
+        return Ok(response);
+    }
+
+    [HttpGet(ApiEndpoints.Movies.GetAll)]
+    public async Task<IActionResult> GetAllAsync()
+    {
+        var movies = await _movieRepository.GetAllAsync();
+        var response = movies.MapToResponse();
+
+        return Ok(response);
+    }
+
+    [HttpPut(ApiEndpoints.Movies.Update)]
+    public async Task<IActionResult> UpdateAsync([FromRoute] Guid id, [FromBody] UpdateMovieRequest request)
+    {
+        var movie = request.MapToMovie(id);
+        bool updated = await _movieRepository.UpdateAsync(movie);
+
+        if (!updated)
+        {
+            return NotFound();
+        }
+
+        var response = movie.MapToResponse();
+
+        return Ok(response);
+    }
+
+    [HttpDelete(ApiEndpoints.Movies.Delete)]
+    public async Task<IActionResult> DeleteAsync([FromRoute] Guid id)
+    {
+        bool deleted = await _movieRepository.DeleteAsync(id);
+
+        if (!deleted)
+        {
+            return NotFound();
+        }
+
+        return Ok();
+    }
+}
